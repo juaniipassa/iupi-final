@@ -1,0 +1,8 @@
+# Configuración y archivos locales
+/config/db.php
+/config/*.local.php
+/config/*.local.*
+*.bak
+*.sql.bak
+.DS_Store
+Thumbs.db
