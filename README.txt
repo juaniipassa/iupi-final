@@ -17,7 +17,7 @@ IMPORTANTE
 - El sitio incluye una protección temporal para todo el equipo y una protección independiente del administrador. Las claves se guardan como hashes en config/access.local.php, que no se debe compartir ni publicar.
 - Para preparar el acceso, copiá config/access.example.php a config/access.local.php y reemplazá los usuarios y hashes. El hash se genera con PHP: php -r "echo password_hash('CLAVE', PASSWORD_DEFAULT), PHP_EOL;". Mientras site_gate_enabled sea true, el catálogo completo pide usuario y clave. Cuando esté listo para público, cambialo a false; admin_auth_enabled queda true y admin.php seguirá protegido.
 - config/db.php y los archivos *.local.php están excluidos de Git para proteger credenciales. No publiques la configuración local. En el hosting, crea una base y un usuario propios, y guarda sus datos en config/db.php. Activa HTTPS antes de compartir el acceso.
-- La protección está preparada para Apache/cPanel. No publiques database.sql: el .htaccess del proyecto bloquea archivos SQL y respaldos.
+- La protección está preparada para Apache/cPanel. database.sql contiene la estructura y los productos de ejemplo para instalar el catálogo; el .htaccess bloquea el acceso directo al SQL y a respaldos cuando se instala en un servidor Apache.
 - Las rutas de imágenes deben ser relativas a esta carpeta, por ejemplo: img/super.jpg
 - Podés escribir varias imágenes, una por línea, al crear un producto.
 - Tipo de catálogo determina dónde aparece: pelotero, extra, barra, carpita, juego, salon u otro.
