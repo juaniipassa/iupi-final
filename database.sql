@@ -5,7 +5,7 @@ USE iupy_catalogo;
 CREATE TABLE IF NOT EXISTS productos (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
-  tipo_catalogo ENUM('pelotero','extra','barra','carpita','juego','salon','otro') NOT NULL DEFAULT 'pelotero',
+  tipo_catalogo ENUM('pelotero','salon','barra','animacion','carpita','juego','souvenir','extra','otro') NOT NULL DEFAULT 'pelotero',
   categoria VARCHAR(80) NOT NULL DEFAULT 'sin-categoria',
   tamano_etiqueta VARCHAR(80) DEFAULT NULL,
   ancho DECIMAL(7,2) DEFAULT NULL,
@@ -14,11 +14,16 @@ CREATE TABLE IF NOT EXISTS productos (
   duracion VARCHAR(80) DEFAULT '3 horas',
   stock INT UNSIGNED NOT NULL DEFAULT 1,
   descripcion TEXT DEFAULT NULL,
+  edad_recomendada VARCHAR(60) DEFAULT NULL,
+  filtro_tamano ENUM('pequeno','mediano','grande') DEFAULT NULL,
+  caracteristica ENUM('agua','electrico','tradicional') DEFAULT NULL,
+  external_item_id INT UNSIGNED DEFAULT NULL,
   activo TINYINT(1) NOT NULL DEFAULT 1,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_tipo_activo (tipo_catalogo, activo),
-  INDEX idx_medidas (ancho, largo)
+  INDEX idx_medidas (ancho, largo),
+  INDEX idx_external_item (external_item_id)
 );
 
 CREATE TABLE IF NOT EXISTS producto_imagenes (
@@ -31,7 +36,7 @@ CREATE TABLE IF NOT EXISTS producto_imagenes (
 
 CREATE TABLE IF NOT EXISTS reglas_precios (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  tipo_catalogo ENUM('todos','pelotero','extra','barra','carpita','juego','salon','otro') NOT NULL DEFAULT 'todos',
+  tipo_catalogo ENUM('todos','pelotero','salon','barra','animacion','carpita','juego','souvenir','extra','otro') NOT NULL DEFAULT 'todos',
   ancho DECIMAL(7,2) DEFAULT NULL,
   largo DECIMAL(7,2) DEFAULT NULL,
   precio DECIMAL(12,2) NOT NULL,
@@ -269,3 +274,60 @@ SELECT p.id,v.ruta,1 FROM (
   SELECT 'Aventura 4 6x5','img/pelotero-aventura-4.jpg'
 ) v JOIN productos p ON p.nombre=v.nombre
 WHERE NOT EXISTS (SELECT 1 FROM producto_imagenes i WHERE i.producto_id=p.id AND i.ruta=v.ruta);
+
+-- Categorías principales solicitadas para el catálogo.
+UPDATE productos SET tipo_catalogo='animacion' WHERE categoria='animaciones' OR nombre LIKE 'Animación %' OR nombre LIKE 'Stand de %' OR nombre='Taller de Arte';
+UPDATE productos SET tipo_catalogo='souvenir' WHERE categoria IN ('souvenirs','personalizados','invitaciones');
+UPDATE productos SET tipo_catalogo='juego' WHERE categoria IN ('juego','juegos') AND tipo_catalogo IN ('extra','otro');
+
+-- Etiquetas para filtros de peloteros. La edad queda vacía hasta que se cargue una recomendación confirmada.
+UPDATE productos SET filtro_tamano = CASE
+  WHEN LOWER(categoria) IN ('chico','pequeño','pequeno') THEN 'pequeno'
+  WHEN LOWER(categoria)='mediano' THEN 'mediano'
+  WHEN LOWER(categoria)='grande' THEN 'grande'
+  WHEN GREATEST(COALESCE(ancho,0),COALESCE(largo,0)) > 0 AND GREATEST(COALESCE(ancho,0),COALESCE(largo,0)) <= 4 THEN 'pequeno'
+  WHEN GREATEST(COALESCE(ancho,0),COALESCE(largo,0)) > 4 AND GREATEST(COALESCE(ancho,0),COALESCE(largo,0)) <= 6 THEN 'mediano'
+  WHEN GREATEST(COALESCE(ancho,0),COALESCE(largo,0)) > 6 THEN 'grande'
+  ELSE filtro_tamano END
+WHERE tipo_catalogo='pelotero';
+UPDATE productos SET caracteristica='agua'
+WHERE tipo_catalogo='pelotero' AND (LOWER(categoria)='agua' OR nombre LIKE '%Pileta%' OR nombre LIKE '%Agua%' OR nombre='Islita Inflable');
+UPDATE productos SET caracteristica='electrico'
+WHERE tipo_catalogo='pelotero' AND (LOWER(categoria) LIKE '%mecanico%' OR LOWER(categoria) LIKE '%eléctrico%' OR LOWER(categoria) LIKE '%electrico%');
+UPDATE productos SET caracteristica='tradicional'
+WHERE tipo_catalogo='pelotero' AND caracteristica IS NULL;
+
+-- Códigos confirmados del sistema externo. Se pueden completar o cambiar desde admin.php.
+UPDATE productos SET external_item_id=51 WHERE nombre='Super Gigante';
+UPDATE productos SET external_item_id=7 WHERE nombre='Castillo 3x5';
+UPDATE productos SET external_item_id=8 WHERE nombre='Pelotero 3x3';
+UPDATE productos SET external_item_id=72 WHERE nombre IN ('Reloj 5x5','Reloj Mecánico 2 hs');
+UPDATE productos SET external_item_id=13 WHERE nombre IN ('Castillo 3x4','Pelotero Castillo 3x4');
+UPDATE productos SET external_item_id=63 WHERE nombre='Desafío 6x6';
+UPDATE productos SET external_item_id=68 WHERE nombre='Aventura 4 6x5';
+UPDATE productos SET external_item_id=12 WHERE nombre='Canchita 8x4';
+UPDATE productos SET external_item_id=69 WHERE nombre='Canchita Box 8x4';
+UPDATE productos SET external_item_id=2 WHERE nombre='Jirafa 4x5';
+UPDATE productos SET external_item_id=62 WHERE nombre='Selvita 4x4';
+UPDATE productos SET external_item_id=56 WHERE nombre='Tejo';
+UPDATE productos SET external_item_id=24 WHERE nombre='Metegol';
+UPDATE productos SET external_item_id=15 WHERE nombre='Sala Blanda 8 unidades';
+UPDATE productos SET external_item_id=11 WHERE nombre='Cama Elástica 3m';
+UPDATE productos SET external_item_id=3 WHERE nombre IN ('Deslizador Común','Deslizador de Agua','Deslizador Pileta');
+
+-- Fotos adicionales elegidas de la carpeta original del catálogo.
+INSERT INTO producto_imagenes (producto_id,ruta,orden)
+SELECT p.id,v.ruta,v.orden FROM (
+  SELECT 'Reloj Mecánico 2 hs' nombre,'img/reloj-mecanico-1.jpg' ruta,1 orden UNION ALL
+  SELECT 'Reloj Mecánico 2 hs','img/reloj-mecanico-2.jpg',2 UNION ALL
+  SELECT 'Reloj 5x5','img/reloj-mecanico-1.jpg',1 UNION ALL
+  SELECT 'Reloj 5x5','img/reloj-mecanico-2.jpg',2 UNION ALL
+  SELECT 'Escalador Pileta','img/escalador-pileta-extra-1.jpg',2 UNION ALL
+  SELECT 'Escalador Pileta','img/escalador-pileta-extra-2.jpg',3 UNION ALL
+  SELECT 'Carpitas Lupy','img/carpitas-original-extra.jpg',2 UNION ALL
+  SELECT 'IUPY Pijamadas','img/carpitas-original-extra.jpg',2 UNION ALL
+  SELECT 'Castillo 3x4','img/castillo-3x4-extra-1.jpg',2 UNION ALL
+  SELECT 'Castillo 3x4','img/castillo-3x4-extra-2.jpg',3
+) v JOIN productos p ON p.nombre=v.nombre
+WHERE NOT EXISTS (SELECT 1 FROM producto_imagenes i WHERE i.producto_id=p.id AND i.ruta=v.ruta);
+

@@ -14,15 +14,14 @@ INSTALACION
 7. Administración: http://localhost/iupy_catalogo_db/admin.php
 
 IMPORTANTE
-- El sitio incluye una protección temporal para todo el equipo y una protección independiente del administrador. Las claves se guardan como hashes en config/access.local.php, que no se debe compartir ni publicar.
-- Para preparar el acceso, copiá config/access.example.php a config/access.local.php y reemplazá los usuarios y hashes. El hash se genera con PHP: php -r "echo password_hash('CLAVE', PASSWORD_DEFAULT), PHP_EOL;". Mientras site_gate_enabled sea true, el catálogo completo pide usuario y clave. Cuando esté listo para público, cambialo a false; admin_auth_enabled queda true y admin.php seguirá protegido.
+- El catálogo es público y el administrador de productos pide usuario y clave. La configuración local se guarda en config/access.local.php, excluida de Git. No publiques las credenciales.
 - config/db.php y los archivos *.local.php están excluidos de Git para proteger credenciales. No publiques la configuración local. En el hosting, crea una base y un usuario propios, y guarda sus datos en config/db.php. Activa HTTPS antes de compartir el acceso.
-- La protección está preparada para Apache/cPanel. database.sql contiene la estructura y los productos de ejemplo para instalar el catálogo; el .htaccess bloquea el acceso directo al SQL y a respaldos cuando se instala en un servidor Apache.
+- La protección está preparada para Apache/cPanel. No publiques database.sql: el .htaccess del proyecto bloquea archivos SQL y respaldos.
 - Las rutas de imágenes deben ser relativas a esta carpeta, por ejemplo: img/super.jpg
 - Podés escribir varias imágenes, una por línea, al crear un producto.
-- Tipo de catálogo determina dónde aparece: pelotero, extra, barra, carpita, juego, salon u otro.
-- La categoría/tamaño es otro dato independiente para filtrar y aplicar reglas de precio.
-- Los cambios de precio por tamaño se guardan en reglas. El precio efectivo de un producto es la regla activa más específica por tipo y medidas; si no hay regla aplicable, usa su precio base.
+- Tipo de catálogo determina dónde aparece: pelotero, salón, barra, animación, carpita, juego, souvenirs o extras/otros.
+- Los peloteros incluyen filtros por edad recomendada, tamaño y tipo (agua, eléctrico/mecánico o tradicional).
+- El precio masivo de administración se aplica sólo a peloteros por tamaño y tipo.
 
 INTEGRACION DEL CATALOGO ANTERIOR
 - La portada del proyecto abre catalogo.php desde index.php.
@@ -32,11 +31,12 @@ INTEGRACION DEL CATALOGO ANTERIOR
 - Las páginas carpitas.html, combos.html, salon.html y pelotero2.0.html estaban vacías. No se inventaron nombres ni precios para sus productos; se pueden cargar desde admin.php.
 
 Consulta de disponibilidad externa:
-- El catálogo muestra el selector de fecha solo en productos asociados a un ID confirmado del sistema de alquileres.
+- Cada producto muestra el selector de fecha. Para consultar, el producto debe tener un ID externo configurado en administración; los demás muestran que el código queda pendiente.
 - Canchita (ID 12) y Canchita Box (ID 69) son productos distintos.
 - Para habilitar la consulta, copiá config/fabricadefiestas.local.example.php como config/fabricadefiestas.local.php y completá el usuario de acceso. La contraseña puede quedar vacía si la cuenta no tiene; el archivo queda bloqueado desde la web por config/.htaccess.
-- La respuesta compara las reservas de esa fecha con el stock del producto en el catálogo local. Mantené ese stock igual a la cantidad real del sistema de alquileres.
+- La respuesta compara las reservas de esa fecha con el stock del producto en el catálogo local. Mantené ese stock igual a la cantidad real del sistema de alquileres. Cuando la página remota informa un precio, también sincroniza el precio base de ese producto.
 - El endpoint consultado requiere autenticación. Usá credenciales vigentes configuradas localmente; si las credenciales compartidas anteriormente siguen activas, cambialas antes de configurarlas.
 - agus.html es una página personal y no forma parte del catálogo comercial.
 - En las páginas originales el precio de Tejo aparece como $2.700 y $27.000. Se dejó $27.000, valor que figura en extras.html.
+
 

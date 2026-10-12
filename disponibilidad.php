@@ -22,20 +22,12 @@ if (!$fecha || ($erroresFecha !== false && ($erroresFecha['warning_count'] || $e
     responder(400, ['error' => 'Ingresá una fecha válida.']);
 }
 
-$idsRemotos = [
-    'Super Gigante' => 51, 'Castillo 3x5' => 7, 'Pelotero 3x3' => 8,
-    'Reloj 5x5' => 72, 'Castillo 3x4' => 13, 'Desafío 6x6' => 63,
-    'Aventura 4 6x5' => 68, 'Canchita 8x4' => 12, 'Canchita Box 8x4' => 69, 'Jirafa 4x5' => 2,
-    'Selvita 4x4' => 62, 'Tejo' => 56, 'Metegol' => 24,
-    'Sala Blanda 8 unidades' => 15, 'Cama Elástica 3m' => 11,
-    'Deslizador Común' => 3,
-];
-
 require __DIR__ . '/config/db.php';
-$stmt = $pdo->prepare('SELECT nombre, stock FROM productos WHERE id = ? AND activo = 1 LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, nombre, stock, precio_base, external_item_id FROM productos WHERE id = ? AND activo = 1 LIMIT 1');
 $stmt->execute([$productoId]);
 $producto = $stmt->fetch();
-if (!$producto || !isset($idsRemotos[$producto['nombre']])) responder(404, ['error' => 'Este producto no tiene consulta de disponibilidad configurada.']);
+if (!$producto) responder(404, ['error' => 'No encontramos ese producto.']);
+if (empty($producto['external_item_id'])) responder(409, ['error' => 'El código de disponibilidad de este producto todavía está pendiente.']);
 
 $configPath = __DIR__ . '/config/fabricadefiestas.local.php';
 if (!is_file($configPath)) responder(503, ['error' => 'Falta configurar el acceso remoto en config/fabricadefiestas.local.php.']);
@@ -91,16 +83,21 @@ libxml_use_internal_errors(true);
 $documento = new DOMDocument();
 if (!$documento->loadHTML('<?xml encoding="utf-8" ?>' . $html)) responder(502, ['error' => 'No se pudo leer la respuesta del sistema remoto.']);
 $xpath = new DOMXPath($documento);
-$idRemoto = $idsRemotos[$producto['nombre']];
+$idRemoto = (int)$producto['external_item_id'];
 $nodos = $xpath->query('//input[@name="items[' . $idRemoto . ']"]');
 if (!$nodos || $nodos->length === 0) responder(502, ['error' => 'El sistema remoto cambió su página y no se pudo encontrar el producto.']);
 
 $reservadas = 0;
+$precioRemoto = null;
 $input = $nodos->item(0);
 for ($nodo = $input->nextSibling; $nodo; $nodo = $nodo->nextSibling) {
     if ($nodo instanceof DOMElement && strtolower($nodo->tagName) === 'input') break;
     if (!$nodo instanceof DOMElement || !in_array(strtolower($nodo->tagName), ['span', 'label'], true)) continue;
     $clases = ' ' . preg_replace('/\s+/', ' ', trim($nodo->getAttribute('class'))) . ' ';
+    if (strtolower($nodo->tagName) === 'span' && $nodo->hasAttribute('rel')) {
+        $precioTexto = trim($nodo->getAttribute('rel'));
+        if (preg_match('/^\d+(?:[.,]\d+)?$/', $precioTexto)) $precioRemoto = (float)str_replace(',', '.', $precioTexto);
+    }
     if (str_contains($clases, ' label-important ')) {
         $texto = trim($nodo->textContent);
         if (preg_match('/\d+/', $texto, $coincidencia)) $reservadas = (int)$coincidencia[0];
@@ -108,11 +105,18 @@ for ($nodo = $input->nextSibling; $nodo; $nodo = $nodo->nextSibling) {
     }
 }
 
+if ($precioRemoto !== null && $precioRemoto > 0 && abs($precioRemoto - (float)$producto['precio_base']) > 0.009) {
+    $actualizarPrecio = $pdo->prepare('UPDATE productos SET precio_base = ? WHERE id = ?');
+    $actualizarPrecio->execute([$precioRemoto, (int)$producto['id']]);
+}
+
 $stock = max(0, (int)$producto['stock']);
 $disponibles = max(0, $stock - $reservadas);
 responder(200, [
     'disponible' => $disponibles > 0,
+    'precio' => $precioRemoto,
     'mensaje' => $disponibles > 0
         ? 'Disponible para esa fecha (' . $disponibles . ' unidad' . ($disponibles === 1 ? '' : 'es') . ').'
         : 'No disponible para esa fecha.',
 ]);
+

@@ -10,9 +10,8 @@ function iupyAuthConfig(): array {
         return $config;
     }
 
-    $host = strtolower(preg_replace('/:\\d+$/', '', $_SERVER['HTTP_HOST'] ?? 'localhost'));
-    $isLocal = in_array($host, ['localhost', '127.0.0.1', '::1'], true);
-    $config = ['site_gate_enabled' => !$isLocal];
+    // El catálogo es público. Sólo el acceso de edición requiere una credencial.
+    $config = ['site_gate_enabled' => false, 'admin_auth_enabled' => true];
     return $config;
 }
 
@@ -57,17 +56,12 @@ function iupyRequireSiteAccess(): void {
 function iupyRequireAdminAccess(): void {
     $config = iupyAuthConfig();
     iupyRequireSiteAccess();
-
-    // Mientras todo el sitio usa la clave temporal, esa sesión habilita también la edición.
-    if (!empty($config['site_gate_enabled'])) return;
-
-    $host = strtolower(preg_replace('/:\\d+$/', '', $_SERVER['HTTP_HOST'] ?? 'localhost'));
-    $isLocal = in_array($host, ['localhost', '127.0.0.1', '::1'], true);
-    if ($isLocal && empty($config['admin_auth_enabled'])) return;
-
-    if (empty($config['admin_username']) || empty($config['admin_password_hash'])) iupyAuthUnavailable();
+    if (empty($config['admin_auth_enabled']) || empty($config['admin_username']) || empty($config['admin_password_hash'])) {
+        iupyAuthUnavailable();
+    }
     iupyStartSession();
     if (!empty($_SESSION['iupy_admin_ok'])) return;
     header('Location: login.php?mode=admin&next=admin.php');
     exit;
 }
+
