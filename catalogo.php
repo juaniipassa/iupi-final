@@ -77,7 +77,7 @@ header{padding:34px 18px 22px;background:linear-gradient(135deg,#ffd6e7,#fff8dc)
 <img src="<?= h($fotoPrincipal) ?>" alt="<?= h($p['nombre']) ?>" onerror="this.onerror=null;this.src='img/sin-imagen.svg'">
 <div class="content"><span class="tag"><?= h($etiquetas[$p['tipo_catalogo']] ?? 'Otros') ?><?= $p['categoria'] && $p['categoria'] !== 'sin-categoria' ? ' · '.h($p['categoria']) : '' ?></span><h3><?= h($p['nombre']) ?></h3>
 <p>Tamaño: <?= $medidas ? h($medidas) : 'Consultar' ?></p>
-<?php if ($precio > 0): ?><p class="precio">Precio: $<?= number_format($precio,0,',','.') ?></p><?php else: ?><p class="precio">Consultar precio</p><?php endif; ?>
+<?php if ($precio > 0): ?><p class="precio" data-precio-producto="<?= (int)$p['id'] ?>">Precio: $<?= number_format($precio,0,',','.') ?></p><?php else: ?><p class="precio" data-precio-producto="<?= (int)$p['id'] ?>">Consultar precio</p><?php endif; ?>
 <p>Duración: <?= $p['duracion'] ? h($p['duracion']) : 'Consultar' ?></p>
 <?php if ($p['tipo_catalogo']==='pelotero' && !empty($p['edad_recomendada'])): ?><p class="age">Edad recomendada: <?= h($p['edad_recomendada']) ?></p><?php endif; ?>
 </div>
@@ -99,7 +99,7 @@ header{padding:34px 18px 22px;background:linear-gradient(135deg,#ffd6e7,#fff8dc)
 <?php if ($p['descripcion']): ?><p><?= nl2br(h($p['descripcion'])) ?></p><?php endif; ?>
 <?php if ($medidas): ?><p>Medidas: <?= h($medidas) ?></p><?php endif; ?>
 <?php if ($p['tipo_catalogo']==='pelotero' && !empty($p['edad_recomendada'])): ?><p>Edad recomendada: <?= h($p['edad_recomendada']) ?></p><?php endif; ?>
-<?php if ($precio > 0): ?><p class="precio">Precio: $<?= number_format($precio,0,',','.') ?></p><?php else: ?><p class="precio">Consultar precio</p><?php endif; ?>
+<?php if ($precio > 0): ?><p class="precio" data-precio-producto="<?= (int)$p['id'] ?>">Precio: $<?= number_format($precio,0,',','.') ?></p><?php else: ?><p class="precio" data-precio-producto="<?= (int)$p['id'] ?>">Consultar precio</p><?php endif; ?>
 <p>Duración: <?= h($p['duracion']) ?></p>
 <a class="btn" target="_blank" rel="noopener" href="https://wa.me/<?= h($whatsapp) ?>?text=<?= h($textoWa) ?>">Consultar por WhatsApp</a>
 <button class="btn" type="button" onclick="abrirReserva(<?= (int)$p['id'] ?>,<?= h(json_encode($p['nombre'], JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_TAG|JSON_HEX_AMP)) ?>)">Reservar</button>
@@ -117,7 +117,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelect
 document.querySelectorAll('.availability-check').forEach(form=>form.addEventListener('submit',async event=>{
  event.preventDefault();const result=form.querySelector('.availability-result');const button=form.querySelector('button');const fecha=form.elements.fecha.value;
  if(!fecha)return;if(form.dataset.configurado!=='1'){result.textContent='El código de este producto todavía está pendiente.';return;}result.textContent='Consultando…';result.className='availability-result';button.disabled=true;
- try{const response=await fetch('disponibilidad.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({producto:form.dataset.producto,fecha})});const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo consultar.');result.textContent=data.mensaje;result.classList.add(data.disponible?'ok':'no');}
+ try{const response=await fetch('disponibilidad.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({producto:form.dataset.producto,fecha})});const data=await response.json();if(!response.ok)throw new Error(data.error||'No se pudo consultar.');result.textContent=data.mensaje;result.classList.add(data.disponible?'ok':'no');if(data.precio>0){const precio=Number(data.precio).toLocaleString('es-AR');document.querySelectorAll('.precio[data-precio-producto="'+form.dataset.producto+'"]').forEach(n=>n.textContent='Precio actualizado: $'+precio);}}
  catch(error){result.textContent=error.message||'No se pudo consultar la disponibilidad.';}finally{button.disabled=false;}
 }));
 </script>
