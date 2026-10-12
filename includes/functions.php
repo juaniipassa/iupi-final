@@ -4,6 +4,10 @@ function h($value) {
 }
 
 function precioEfectivo(PDO $pdo, array $producto): float {
+    // Los artículos vinculados al sistema remoto usan su precio base sincronizado.
+    if (!empty($producto['external_item_id']) && (float)$producto['precio_base'] > 0) {
+        return (float)$producto['precio_base'];
+    }
     // Coincidencia exacta por medidas y tipo; una regla "todos" sirve para cualquier tipo.
     if ($producto['ancho'] !== null && $producto['largo'] !== null) {
         $sql = "SELECT precio FROM reglas_precios
@@ -30,3 +34,4 @@ function imagenesProducto(PDO $pdo, int $id): array {
     $stmt->execute([$id]);
     return array_column($stmt->fetchAll(), 'ruta');
 }
+
